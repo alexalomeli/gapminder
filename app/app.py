@@ -3,47 +3,77 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
 
-@st.cache_data
-def load_data():
-    population = pd.read_csv('population.csv')
-    life_expectancy = pd.read_csv('life_expectancy.csv')
-    gni_per_capita = pd.read_csv('gni_per_capita.csv')
+def k_to_number(value):
+    if isinstance(value, str):
+        if 'k' in value:
+            number = float(value.replace('k', '')) * 1000
+            return int(number)
+    return value
 
-    # Forward fill missing values
-    population = population.ffill()
-    life_expectancy = life_expectancy.ffill()
-    gni_per_capita = gni_per_capita.ffill()
+def M_to_number(value):
+    if isinstance(value, str):
+        if 'M' in value:
+            number = float(value.replace('M', '')) * 1000000
+            return int(number)
+    return value
 
-    # Reshape data into tidy format
-    population = population.melt(id_vars='country', var_name='year', value_name='population')
-    life_expectancy = life_expectancy.melt(id_vars='country', var_name='year', value_name='life_expectancy')
-    gni_per_capita = gni_per_capita.melt(id_vars='country', var_name='year', value_name='gni_per_capita')
+def B_to_number(value):
+    if isinstance(value, str):
+        if 'B' in value:
+            number = float(value.replace('B', '')) * 1000000000
+            return int(number)
+    return value
 
-    # Merge dataframes
-    data = population.merge(life_expectancy, on=['country', 'year'])
-    data = data.merge(gni_per_capita, on=['country', 'year'])
+#Load data
 
-    return data
+population = pd.read_csv('population.csv')
+life_expectancy = pd.read_csv('life_expectancy.csv')
+gni_per_capita = pd.read_csv('gni_per_capita.csv')
 
-data = load_data()
+#Matrix to table
+population=population.melt(['country'], var_name= 'year', value_name='population')
+gni_per_capita=gni_per_capita.melt(['country'], var_name= 'year', value_name='gni_per_capita')
+life_expectancy=life_expectancy.melt(['country'], var_name= 'year', value_name='life_expectancy')
 
-st.title('Gapminder')
+#Sort values before forward filling
 
-# Year slider
-year = st.slider('Year', min_value=int(data['year'].min()), max_value=int(data['year'].max()), value=int(data['year'].max()))
+population=population.sort_values(['country','year'], ascending=[True,False])
+gni_per_capita=gni_per_capita.sort_values(['country','year'], ascending=[True,False])
+life_expectancy=life_expectancy.sort_values(['country','year'], ascending=[True,False])
 
-# Country selection
-countries = st.multiselect('Select Countries', data['country'].unique())
+#Forward filling
 
-# Filter data based on year and selected countries
-filtered_data = data[(data['year'] == year) & (data['country'].isin(countries))]
+population['population']=population['population'].ffill()
+gni_per_capita['gni_per_capita']=gni_per_capita['gni_per_capita'].ffill()
+life_expectancy['life_expectancy']=life_expectancy['life_expectancy'].ffill()
 
-fig = px.scatter(filtered_data, x='gni_per_capita', y='life_expectancy', size='population', color='country', log_x=True, hover_data=['country'])
+#Concatenate data
 
-fig.update_layout(
-    title='GNI per capita vs Life Expectancy',
-    xaxis_title='Logarithmic GNI per capita',
-    yaxis_title='Life Expectancy'
-)
+df=pd.merge(gni_per_capita, life_expectancy, on=['country','year'], how='inner')
+df=pd.merge(df, population, on=['country','year'], how='inner')
 
-st.plotly_chart(fig)
+#Replace k,M,B
+
+df['population'] = df['population'].apply(lambda value: k_to_number(value) if isinstance(value, str) else value)
+df['population'] = df['population'].apply(lambda value: M_to_number(value) if isinstance(value, str) else value)
+df['population'] = df['population'].apply(lambda value: B_to_number(value) if isinstance(value, str) else value)
+
+df['gni_per_capita'] = df['gni_per_capita'].apply(lambda value: k_to_number(value) if isinstance(value, str) else value)
+df['gni_per_capita'] = df['gni_per_capita'].apply(lambda value: M_to_number(value) if isinstance(value, str) else value)
+df['gni_per_capita'] = df['gni_per_capita'].apply(lambda value: B_to_number(value) if isinstance(value, str) else value)
+
+df['life_expectancy'] = df['life_expectancy'].apply(lambda value: k_to_number(value) if isinstance(value, str) else value)
+df['life_expectancy'] = df['life_expectancy'].apply(lambda value: M_to_number(value) if isinstance(value, str) else value)
+df['life_expectancy'] = df['life_expectancy'].apply(lambda value: B_to_number(value) if isinstance(value, str) else value)
+
+# Convert 'population' column to numeric values
+df['population'] = pd.to_numeric(df['population'], errors='coerce')
+
+# Calculate the maximum value for the size parameter
+max_size = df['population'].max()
+
+# Use the DataFrame for visualization
+fig = px.scatter(df, x='gni_per_capita', y='life_expectancy', size='population',
+                 hover_name='country', title='GNI per Capita vs Life Expectancy',
+                 size_max=max_size)
+fig.show()
