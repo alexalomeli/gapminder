@@ -38,7 +38,7 @@ countries = st.multiselect('Select Countries', data['country'].unique())
 filtered_data = data[(data['year'] == year) & (data['country'].isin(countries))]
 
 # Scatter plot
-plt.scatter(filtered_data['GNI'], filtered_data['life_expectancy'], s=filtered_data['population'] / 1e6,
+plt.scatter(filtered_data['gni_per_capita'], filtered_data['life_expectancy'], s=filtered_data['population'] / 1e6,
             c=filtered_data['country'], alpha=0.7, cmap='Set3')
 plt.xlabel('GNI per capita')
 plt.ylabel('Life Expectancy')
