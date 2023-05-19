@@ -1,6 +1,7 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import plotly.express as px
 
 @st.cache_data
 def load_data():
@@ -37,21 +38,12 @@ countries = st.multiselect('Select Countries', data['country'].unique())
 # Filter data based on year and selected countries
 filtered_data = data[(data['year'] == year) & (data['country'].isin(countries))]
 
-# Scatter plot
-plt.scatter(filtered_data['gni_per_capita'], filtered_data['life_expectancy'], s=filtered_data['population'] / 1e6,
-            c=filtered_data['country'], alpha=0.7, cmap='Set3')
-plt.xlabel('GNI per capita')
-plt.ylabel('Life Expectancy')
-plt.title('Gapminder Visualization')
-plt.colorbar(label='Country')
-plt.xscale('log')
-plt.xlim(100, 100000)
-plt.ylim(30, 90)
-plt.grid(True)
+fig = px.scatter(filtered_data, x='gni_per_capita', y='life_expectancy', size='population', color='country', log_x=True, hover_data=['country'])
 
-# Display the plot using Streamlit
-st.pyplot(plt)
+fig.update_layout(
+    title='GNI per capita vs Life Expectancy',
+    xaxis_title='Logarithmic GNI per capita',
+    yaxis_title='Life Expectancy'
+)
 
-# Additional content
-st.write("Unlocking Lifetimes: Visualizing Progress in Longevity and Poverty Eradication")
-
+st.plotly_chart(fig)
