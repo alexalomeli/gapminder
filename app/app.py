@@ -79,7 +79,12 @@ df['gni_per_capita'] = [B_to_number(value) if isinstance(value, str) else value 
 df['life_expectancy'] = [B_to_number(value) if isinstance(value, str) else value for value in df['life_expectancy']]
 
 # Drop rows with nan values in the 'population' column
-df = df.dropna(subset=['population'])
+#df = df.dropna(subset=['population'])
+
+#Replace NaN with 0
+df['population'] = pd.to_numeric(df['population'].fillna(0))
+df['gni_per_capita'] = pd.to_numeric(df['gni_per_capita'].fillna(0))
+df['life_expectancy'] = pd.to_numeric(df['life_expectancy'].fillna(0))
 
 st.title('Gapminder')
 
@@ -87,13 +92,15 @@ st.title('Gapminder')
 year = st.slider('Year', min_value=int(df['year'].min()), max_value=int(df['year'].max()), value=int(df['year'].max()))
 
 # Country selection
-countries = st.multiselect('Select Countries', df['country'].unique())
+
+countries = st.multiselect('Select Countries', df['country'].unique(),['Barbados'])
 
 # Filter data based on year and selected countries
-filtered_data = df[(df['year'] == year) & (df['country'].isin(countries))]
+#filtered_data = df[((df['year'] == year) & (df['country'].isin(countries)))]
+filtered_df = df[(((df['year']) == str(year)) & (df['country'].isin(countries)))]
 
 # Create bubble chart
-fig = px.scatter(filtered_data, x='gni_per_capita', y='life_expectancy', size='population',
+fig = px.scatter(filtered_df, x='gni_per_capita', y='life_expectancy', size='population',
                  color='country', log_x=True, hover_data=['country'])
 
 fig.update_layout(
