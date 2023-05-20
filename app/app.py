@@ -3,27 +3,6 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import plotly.express as px
 
-def k_to_number(value):
-    if isinstance(value, str):
-        if 'k' in value:
-            number = float(value.replace('k', '')) * 1000
-            return int(number)
-    return value
-
-def M_to_number(value):
-    if isinstance(value, str):
-        if 'M' in value:
-            number = float(value.replace('M', '')) * 1000000
-            return int(number)
-    return value
-
-def B_to_number(value):
-    if isinstance(value, str):
-        if 'B' in value:
-            number = float(value.replace('B', '')) * 1000000000
-            return int(number)
-    return value
-
 #Load data
 
 population = pd.read_csv('population.csv')
@@ -54,26 +33,74 @@ df=pd.merge(df, population, on=['country','year'], how='inner')
 
 #Replace k,M,B
 
-df['population'] = df['population'].apply(lambda value: k_to_number(value) if isinstance(value, str) else value)
-df['population'] = df['population'].apply(lambda value: M_to_number(value) if isinstance(value, str) else value)
-df['population'] = df['population'].apply(lambda value: B_to_number(value) if isinstance(value, str) else value)
+def k_to_number(value):
+    if 'k'in value:
+        number=float(value.replace('k', ''))*1000
+        return int(number)
+    elif isinstance(value,float):
+        return int(value)
+    try:
+        return int(value)
+    except ValueError:
+        return None
+    
+def M_to_number(value):
+    if 'M'in value:
+        number=float(value.replace('M', ''))*1000000
+        return int(number)
+    elif isinstance(value,float):
+        return int(value)
+    try:
+        return int(value)
+    except ValueError:
+        return None
+    
+def B_to_number(value):
+    if 'B'in value:
+        number=float(value.replace('B', ''))*1000000000
+        return int(number)
+    elif isinstance(value,float):
+        return int(value)
+    try:
+        return int(value)
+    except ValueError:
+        return None
 
-df['gni_per_capita'] = df['gni_per_capita'].apply(lambda value: k_to_number(value) if isinstance(value, str) else value)
-df['gni_per_capita'] = df['gni_per_capita'].apply(lambda value: M_to_number(value) if isinstance(value, str) else value)
-df['gni_per_capita'] = df['gni_per_capita'].apply(lambda value: B_to_number(value) if isinstance(value, str) else value)
+df['population'] = [k_to_number(value) if isinstance(value, str) else value for value in df['population']]
+df['gni_per_capita'] = [k_to_number(value) if isinstance(value, str) else value for value in df['gni_per_capita']]
+df['life_expectancy'] = [k_to_number(value) if isinstance(value, str) else value for value in df['life_expectancy']]
 
-df['life_expectancy'] = df['life_expectancy'].apply(lambda value: k_to_number(value) if isinstance(value, str) else value)
-df['life_expectancy'] = df['life_expectancy'].apply(lambda value: M_to_number(value) if isinstance(value, str) else value)
-df['life_expectancy'] = df['life_expectancy'].apply(lambda value: B_to_number(value) if isinstance(value, str) else value)
+df['population'] = [M_to_number(value) if isinstance(value, str) else value for value in df['population']]
+df['gni_per_capita'] = [M_to_number(value) if isinstance(value, str) else value for value in df['gni_per_capita']]
+df['life_expectancy'] = [M_to_number(value) if isinstance(value, str) else value for value in df['life_expectancy']]
 
-# Convert 'population' column to numeric values
-df['population'] = pd.to_numeric(df['population'], errors='coerce')
+df['population'] = [B_to_number(value) if isinstance(value, str) else value for value in df['population']]
+df['gni_per_capita'] = [B_to_number(value) if isinstance(value, str) else value for value in df['gni_per_capita']]
+df['life_expectancy'] = [B_to_number(value) if isinstance(value, str) else value for value in df['life_expectancy']]
 
-# Calculate the maximum value for the size parameter
-max_size = df['population'].max()
+# Drop rows with nan values in the 'population' column
+df = df.dropna(subset=['population'])
 
-# Use the DataFrame for visualization
-fig = px.scatter(df, x='gni_per_capita', y='life_expectancy', size='population',
-                 hover_name='country', title='GNI per Capita vs Life Expectancy',
-                 size_max=max_size)
-fig.show()
+st.title('Gapminder')
+
+# Year slider
+year = st.slider('Year', min_value=int(df['year'].min()), max_value=int(df['year'].max()), value=int(df['year'].max()))
+
+# Country selection
+countries = st.multiselect('Select Countries', df['country'].unique())
+
+# Filter data based on year and selected countries
+filtered_data = df[(df['year'] == year) & (df['country'].isin(countries))]
+
+# Create bubble chart
+fig = px.scatter(filtered_data, x='gni_per_capita', y='life_expectancy', size='population',
+                 color='country', log_x=True, hover_data=['country'])
+
+fig.update_layout(
+    title='GNI per capita vs Life Expectancy',
+    xaxis_title='Logarithmic GNI per capita',
+    yaxis_title='Life Expectancy'
+)
+
+# Render the chart using Streamlit
+st.plotly_chart(fig)
